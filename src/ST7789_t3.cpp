@@ -22,6 +22,7 @@
 #include "wiring_private.h"
 #include <SPI.h>
 
+#define dbg(...) Serial.printf( __VA_ARGS__ )
  
 #define ST77XX_MADCTL_MY  0x80
 #define ST77XX_MADCTL_MX  0x40
@@ -160,7 +161,7 @@ static const uint8_t PROGMEM
 
 void  ST7789_t3::init(uint16_t width, uint16_t height, uint8_t mode)
 {
-  Serial.printf("ST7789_t3::init mode: %x\n", mode);
+	dbg("ST7789_t3::init( %u x %u, mode: %x )\n", width, height, mode);
 	commonInit(NULL, mode);
 
   if ((width == 240) && (height == 240)) {

@@ -32,6 +32,8 @@
   #define DEBUG_PIN_3 2
 #endif
 
+#define dbg(...) Serial.printf( __VA_ARGS__ )
+
 volatile short _dma_dummy_rx;
 
 ST7735_t3 *ST7735_t3::_dmaActiveDisplay[3] = {0, 0, 0};
@@ -4688,3 +4690,100 @@ void ST7735_t3::waitUpdateAsyncComplete(void)
 
 #endif
 
+inline uint16_t swab(uint16_t a)
+{
+	return __builtin_bswap16(a);
+	// return ((a << 8) & 0xff00) | ((a >> 8) & 0x00ff);
+}
+
+// Clipping macro for pushImage
+#define PI_CLIP                                        \
+  x+= _originx;                                         \
+  y+= _originy;                                         \
+                                                       \
+  if ((x >= _displayclipx2) || (y >= _displayclipy2)) return; \
+                                                       \
+  int32_t dx = 0;                                      \
+  int32_t dy = 0;                                      \
+  int32_t dw = w;                                      \
+  int32_t dh = h;                                      \
+                                                       \
+  if (x < _displayclipx1) {                            \
+      dx = _displayclipx1 - x; dw -= dx; x = _displayclipx1; \
+  }                                                    \
+  if (y < _displayclipy1) { dy = _displayclipy1 - y; dh -= dy; y = _displayclipy1; } \
+                                                       \
+  if ((x + dw) > _displayclipx2 ) dw = _displayclipx2 - x;  \
+  if ((y + dh) > _displayclipy2 ) dh = _displayclipy2 - y;  \
+                                                       \
+  if (dw < 1 || dh < 1) return;
+
+/***************************************************************************************
+** Function name:           pushImage
+** Description:             plot 16 bit colour sprite or image onto TFT
+***************************************************************************************/
+void ST7735_t3::pushImage(int32_t x, int32_t y, int32_t w, int32_t h, const uint16_t *data)
+{
+	dbg("pushImage %u, %u, %u, %u\n", x, y, w, h);
+
+	PI_CLIP;
+
+	dbg("Setting address to %u, %u, %u, %u\n", x, y, x+dw-1, y+dh-1);
+
+	beginSPITransaction();
+
+	setAddr(x, y, x + dw - 1, y + dh - 1);
+	writecommand(ST7735_RAMWR);
+
+	data += dx + dy * w;
+
+	// Check if whole image can be pushed
+	if (dw == w) {
+		pushPixels(data, (dw * dh) - 1);
+		data += ((dw * dh) - 1);
+		writedata16_last(_swapBytes? *data : swab(*data));
+	}
+	else {
+		// Push line segments to crop image
+		while (dh-- > 1) {
+			pushPixels(data, dw);
+			data += w;
+		}
+		pushPixels(data, dw - 1);
+		data += (dw - 1);
+		writedata16_last(_swapBytes? *data : swab(*data));
+	}
+
+	endSPITransaction();
+}
+
+void ST7735_t3::pushPixels(const void* data_in, uint32_t len)
+{
+
+	uint16_t *data = (uint16_t*)data_in;
+	// _swapBytes is inverted logic for some reason
+	if (!_swapBytes) {
+		while (len > 1) {
+			writedata16(swab(*data));
+			data++;
+			writedata16(swab(*data));
+			data++;
+			len -=2;
+		}
+		if (len) {
+			writedata16(swab(*data));
+		}
+		return;
+	}
+
+	while (len > 1) {
+		writedata16(*data);
+		data++;
+		writedata16(*data);
+		data++;
+		len -=2;
+	}
+	if (len) {
+		writedata16(*data);
+	}
+}

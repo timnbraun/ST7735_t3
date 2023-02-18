@@ -262,7 +262,13 @@ class ST7735_t3 : public Print
 	void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size_x, uint8_t size_y);
 	void inline drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size) 
 	    { drawChar(x, y, c, color, bg, size, size);}
-	
+
+	// Image rendering
+	// Swap the byte order for pushImage() and pushPixels() - corrects endianness
+	void     setSwapBytes(bool swap) { _swapBytes = swap; };
+	bool     getSwapBytes(void) { return _swapBytes; };
+	void     pushImage(int32_t x, int32_t y, int32_t w, int32_t h, const uint16_t *data);
+
 	static const int16_t CENTER = 9998;
 	void setCursor(int16_t x, int16_t y, bool autoCenter=false);
     void getCursor(int16_t *x, int16_t *y);
@@ -409,7 +415,6 @@ class ST7735_t3 : public Print
                      uint8_t bits_per_pixel, const uint8_t *pixels,
                      const uint16_t *palette);
 
-
 // Frame buffer support
 #ifdef ENABLE_ST77XX_FRAMEBUFFER
   enum {ST77XX_DMA_INIT=0x01, 
@@ -480,6 +485,7 @@ class ST7735_t3 : public Print
 	int16_t  _displayclipx1, _displayclipy1, _displayclipx2, _displayclipy2;
 	bool _invisible = false; 
 	bool _standard = true; // no bounding rectangle or origin set. 
+	bool _swapBytes; // Swap the byte order for TFT pushImage()
 
 	inline void updateDisplayClip() {
 		_displayclipx1 = max(0,min(_clipx1+_originx, width()));
@@ -528,6 +534,7 @@ class ST7735_t3 : public Print
 	void drawFontBits(bool opaque, uint32_t bits, uint32_t numbits, int32_t x, int32_t y, uint32_t repeat);
 	void drawFontPixel( uint8_t alpha, uint32_t x, uint32_t y );
 	uint32_t fetchpixel(const uint8_t *p, uint32_t index, uint32_t x);
+  void     pushPixels(const void * data_in, uint32_t len);
 
 
   uint16_t _colstart, _rowstart, _xstart, _ystart, _rot, _screenHeight, _screenWidth;
@@ -922,4 +929,4 @@ private:
 
 #endif	 //end cplus
 
-#endif	 
+#endif
