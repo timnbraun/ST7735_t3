@@ -41,6 +41,9 @@
 #endif
 #endif
 
+#if __has_include(<tft_setup.h>)
+	#include <tft_setup.h>
+#endif
 
 #define ST7735_SPICLOCK 24000000
 //#define ST7735_SPICLOCK 16000000
@@ -534,7 +537,7 @@ class ST7735_t3 : public Print
 	void drawFontBits(bool opaque, uint32_t bits, uint32_t numbits, int32_t x, int32_t y, uint32_t repeat);
 	void drawFontPixel( uint8_t alpha, uint32_t x, uint32_t y );
 	uint32_t fetchpixel(const uint8_t *p, uint32_t index, uint32_t x);
-  void     pushPixels(const void * data_in, uint32_t len);
+  void     pushPixels(const void * data_in, uint32_t len, bool end_it = true);
 
 
   uint16_t _colstart, _rowstart, _xstart, _ystart, _rot, _screenHeight, _screenWidth;

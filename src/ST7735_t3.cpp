@@ -610,7 +610,7 @@ static const uint8_t PROGMEM
       0x00,                   //     Boost frequency
     ST7735_PWCTR4 , 2      ,  // 10: Power control, 2 args, no delay:
       0x8A,                   //     BCLK/2, Opamp current small & Medium low
-      0x2A,  
+      0x2A,
     ST7735_PWCTR5 , 2      ,  // 11: Power control, 2 args, no delay:
       0x8A, 0xEE,
     ST7735_VMCTR1 , 1      ,  // 12: Power control, 1 arg, no delay:
@@ -4725,6 +4725,9 @@ inline uint16_t swab(uint16_t a)
 void ST7735_t3::pushImage(int32_t x, int32_t y, int32_t w, int32_t h, const uint16_t *data)
 {
 	dbg("pushImage %u, %u, %u, %u\n", x, y, w, h);
+	#ifdef ENABLE_ST77XX_FRAMEBUFFER
+	dbg("pushImage: _use_fbtft = %u\n", _use_fbtft);
+	#endif
 
 	PI_CLIP;
 
@@ -4739,51 +4742,46 @@ void ST7735_t3::pushImage(int32_t x, int32_t y, int32_t w, int32_t h, const uint
 
 	// Check if whole image can be pushed
 	if (dw == w) {
-		pushPixels(data, (dw * dh) - 1);
-		data += ((dw * dh) - 1);
-		writedata16_last(_swapBytes? *data : swab(*data));
+		pushPixels(data, dw * dh);
 	}
 	else {
 		// Push line segments to crop image
 		while (dh-- > 1) {
-			pushPixels(data, dw);
+			pushPixels(data, dw, false);
 			data += w;
 		}
-		pushPixels(data, dw - 1);
-		data += (dw - 1);
-		writedata16_last(_swapBytes? *data : swab(*data));
+		pushPixels(data, dw);
 	}
 
 	endSPITransaction();
 }
 
-void ST7735_t3::pushPixels(const void* data_in, uint32_t len)
+void ST7735_t3::pushPixels(const void* data_in, uint32_t len, bool end_it)
 {
+
+	if (!len)
+		return;
 
 	uint16_t *data = (uint16_t*)data_in;
 	// _swapBytes is inverted logic for some reason
 	if (!_swapBytes) {
 		while (len > 1) {
-			writedata16(swab(*data));
-			data++;
-			writedata16(swab(*data));
-			data++;
-			len -=2;
+			writedata16(swab(*data++));
+			len--;
 		}
-		if (len) {
+		if (end_it)
+			writedata16_last(swab(*data));
+		else
 			writedata16(swab(*data));
-		}
 		return;
 	}
 
 	while (len > 1) {
-		writedata16(*data);
-		data++;
-		writedata16(*data);
-		data++;
-		len -=2;
+		writedata16(*data++);
+		len--;
 	}
-	if (len) {
+	if (end_it)
+		writedata16_last(*data);
+	else
 		writedata16(*data);
-	}
 }
