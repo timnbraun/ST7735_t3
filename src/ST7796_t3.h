@@ -16,16 +16,16 @@
   MIT license, all text above must be included in any redistribution
  ****************************************************/
 
-#ifndef __ST7789_t3_H_
-#define __ST7789_t3_H_
+#ifndef __ST7796_t3_H_
+#define __ST7796_t3_H_
 #include "ST7735_t3.h"
 
-class ST7789_t3 : public ST7735_t3 {
+class ST7796_t3 : public ST7735_t3 {
 
  public:
 
-  ST7789_t3(uint8_t CS, uint8_t RS, uint8_t SID, uint8_t SCLK, uint8_t RST = -1);
-  ST7789_t3(uint8_t CS, uint8_t RS, uint8_t RST = -1);
+  ST7796_t3(uint8_t CS, uint8_t RS, uint8_t SID, uint8_t SCLK, uint8_t RST = -1);
+  ST7796_t3(uint8_t CS, uint8_t RS, uint8_t RST = -1);
 
   virtual void  setRotation(uint8_t m);
 
