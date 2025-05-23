@@ -29,6 +29,13 @@
 #define ST77XX_MADCTL_MV  0x20
 #define ST77XX_MADCTL_ML  0x10
 #define ST77XX_MADCTL_RGB 0x00
+#define ST77XX_MADCTL_BGR 0x08
+
+#if defined(TFT_RGB_ORDER) && (TFT_RGB_ORDER == 1)
+#define TFT_MAD_COLOR_ORDER ST77XX_MADCTL_RGB
+#else
+#define TFT_MAD_COLOR_ORDER ST77XX_MADCTL_BGR
+#endif
 
 ST7789_t3::ST7789_t3(uint8_t CS, uint8_t RS, uint8_t SID, uint8_t SCLK, uint8_t RST) : ST7735_t3(CS, RS, SID, SCLK, RST) 
 {
@@ -72,7 +79,8 @@ void  ST7789_t3::setRotation(uint8_t m)
   rotation = m % 4; // can't be higher than 3
   switch (rotation) {
    case 0:
-     writedata_last(ST77XX_MADCTL_MX | ST77XX_MADCTL_MY | ST77XX_MADCTL_RGB);
+     writedata_last(TFT_MAD_COLOR_ORDER);
+     // writedata_last(ST77XX_MADCTL_MX | ST77XX_MADCTL_MY | ST77XX_MADCTL_RGB);
 
      _xstart = _colstart;
      _ystart = _rowstart;
@@ -80,7 +88,8 @@ void  ST7789_t3::setRotation(uint8_t m)
      _height = _screenHeight;
      break;
    case 1:
-     writedata_last(ST77XX_MADCTL_MY | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB);
+     writedata_last(ST77XX_MADCTL_MX | ST77XX_MADCTL_MV | TFT_MAD_COLOR_ORDER);
+     // writedata_last(ST77XX_MADCTL_MY | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB);
 
      _xstart = _rowstart;
      _ystart = _colstart;
@@ -88,7 +97,8 @@ void  ST7789_t3::setRotation(uint8_t m)
      _width = _screenHeight;
      break;
   case 2:
-     writedata_last(ST77XX_MADCTL_RGB); 
+     writedata_last(ST77XX_MADCTL_MX | ST77XX_MADCTL_MY | TFT_MAD_COLOR_ORDER);
+     // writedata_last(ST77XX_MADCTL_RGB);
     if ((_screenWidth == 135) && (_screenHeight == 240)) {
       _xstart = _colstart - 1;
       _ystart = _rowstart;
@@ -101,7 +111,8 @@ void  ST7789_t3::setRotation(uint8_t m)
      break;
 
    case 3:
-     writedata_last(ST77XX_MADCTL_MX | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB);
+     writedata_last(ST77XX_MADCTL_MY | ST77XX_MADCTL_MV | TFT_MAD_COLOR_ORDER);
+     // writedata_last(ST77XX_MADCTL_MX | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB);
     if ((_screenWidth == 135) && (_screenHeight == 240)) {
       _xstart = _rowstart;
       _ystart = _colstart;
@@ -114,7 +125,7 @@ void  ST7789_t3::setRotation(uint8_t m)
      break;
   }
 
-  _rot = m;  
+  _rot = m;
   endSPITransaction();
 //  Serial.printf("Set rotation %d start(%d %d) row: %d, col: %d\n", m, _xstart, _ystart, _rowstart, _colstart);
   setClipRect();
@@ -135,22 +146,22 @@ static const uint8_t PROGMEM
     ST7735_SWRESET,   DELAY,  //  1: Software reset, no args, w/delay
       150,                     //    150 ms delay
     ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, no args, w/delay
-      255,                    //     255 = 500 ms delay
+      100,                    //     255 = 500 ms delay
     ST7735_COLMOD , 1+DELAY,  //  3: Set color mode, 1 arg + delay:
       0x55,                   //     16-bit color
       10,                     //     10 ms delay
     ST7735_MADCTL , 1      ,  //  4: Memory access ctrl (directions), 1 arg:
-      0x08,                   //     Row addr/col addr, bottom to top refresh
+      TFT_MAD_COLOR_ORDER,      //     Row addr/col addr, bottom to top refresh
     ST7735_CASET  , 4      ,  //  5: Column addr set, 4 args, no delay:
-      0x00, 
+      0x00,
       0x00,                   //     XSTART = 0
-      0x00, 
-      240,                    //      XEND = 240
+      TFT_HEIGHT >> 8,
+      TFT_HEIGHT & 0xff,      //      XEND = 240
     ST7735_RASET  , 4      ,  // 6: Row addr set, 4 args, no delay:
-      0x00, 
+      0x00,
       0x00,                   //     YSTART = 0
-      320>>8, 
-      320 & 0xFF,             //      YEND = 320
+      TFT_WIDTH >> 8,
+      TFT_WIDTH  & 0xFF,      //      YEND = 320
     ST7735_INVON ,   DELAY,   // 7: hack
       10,
     ST7735_NORON  ,   DELAY,  // 8: Normal display on, no args, w/delay
@@ -161,7 +172,8 @@ static const uint8_t PROGMEM
 
 void  ST7789_t3::init(uint16_t width, uint16_t height, uint8_t mode)
 {
-	dbg("ST7789_t3::init( %u x %u, mode: %x )\n", width, height, mode);
+	dbg("ST7789_t3::init( %u x %u, mode: %x, %s )\n", width, height, mode,
+		TFT_MAD_COLOR_ORDER == ST77XX_MADCTL_RGB? "rbg" : "gbr" );
 	commonInit(NULL, mode);
 
   if ((width == 240) && (height == 240)) {
